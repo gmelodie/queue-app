@@ -1,18 +1,22 @@
 import sys, math, string, secrets, enum, cmd
 from collections import OrderedDict
 
+
 MAX_NUM_OPS = 26
+
 
 class OperatorStates(enum.Enum):
     AVAILABLE = 'available'
     RINGING = 'ringing'
     BUSY = 'busy'
 
+
 class Operator():
     def __init__(self, op_id):
         self.op_id = op_id
         self.state = OperatorStates.AVAILABLE
         self.call_id = None
+
 
 class CallCenter(cmd.Cmd):
     def do_call(self, call_id):
@@ -23,7 +27,7 @@ class CallCenter(cmd.Cmd):
                 print('error: call', call_id, 'already exists')
                 return
             print('Call', call_id, 'received')
-            receive_call(call_id)
+            new_call(call_id)
         else:
             print('error: no call id specified')
 
@@ -68,14 +72,19 @@ class CallCenter(cmd.Cmd):
     do_EOF = do_exit
 
 
-def receive_call(call_id):
-
-    if len(free_operators) <= 0:
+def new_call(call_id):
+    """ Creates a new call with ID <call_id>
+    Assigns call to available operator
+    Inserts assigned call into handle_calls
+    Changes operator state from AVAILABLE to RINGING
+    Puts in wait_calls if no operators are available
+    """
+    if len(available_operators) <= 0:
         wait_calls.append(call_id)
         print('Call', call_id, 'waiting in queue')
         return
 
-    op_id, op = free_operators.popitem(last=False)
+    op_id, op = available_operators.popitem(last=False)
 
     handle_calls[call_id] = op_id
     op.call_id = call_id
@@ -86,44 +95,33 @@ def receive_call(call_id):
 
 
 def op_answer_call(op_id):
-    if op_id not in ringing_operators:
-        print('error: operator not in ringing state')
-        return
-
-    op = ringing_operators.pop(op_id)
-
-    if op.call_id is None:
-        print('error: operator in ringing state but no call_id is none')
-        op_free(op)
-        print('Operator', op_id, 'moved back to', \
-              OperatorStates.AVAILABLE, 'state')
-        return
-
-    op.state = OperatorStates.BUSY
-    busy_operators[op_id] = op
-    print('Call', op.call_id, 'answered by operator', op.op_id)
+    """ Accepts a ringing call in the operator with ID <op_id>
+    Moves operator to BUSY state
+    """
+    op = _op_respond_call(op_id)
+    if op:
+        op.state = OperatorStates.BUSY
+        busy_operators[op_id] = op
+        print('Call', op.call_id, 'answered by operator', op.op_id)
 
 
 def op_reject_call(op_id):
-    if op_id not in ringing_operators:
-        print('error: operator not in ringing state')
-        return
-
-    op = ringing_operators.pop(op_id)
-
-    if op.call_id is None:
-        print('error: operator in ringing state but call_id is None')
-        op_free(op)
-        print('Operator', op_id, 'moved back to', \
-              OperatorStates.AVAILABLE, 'state')
-        return
-
-    print('Call', op.call_id, 'rejected by operator', op.op_id)
-    wait_calls.append(op.call_id)
-    op_free(op)
+    """ Rejects a ringing call in the operator with ID <op_id>
+    Frees operator and move call to wait_calls
+    """
+    op = _op_respond_call(op_id)
+    if op:
+        print('Call', op.call_id, 'rejected by operator', op.op_id)
+        wait_calls.append(op.call_id)
+        _op_free(op)
 
 
 def hangup_call(call_id):
+    """ Deletes or ends a call with ID <call_id>
+    Remove call if it is in the wait_calls (Call missed)
+    Prints an error if the call is not in wait_calls or hadle_calls
+    Terminates and frees operator if call is ringing or has been answered
+    """
     if call_id in wait_calls:
         op_id = wait_calls.remove(call_id)
         print('Call', call_id, 'missed')
@@ -140,28 +138,48 @@ def hangup_call(call_id):
 
     op = busy_operators[op_id]
     print('Call', call_id, 'finished and operator', op_id, 'available')
-    op_free(op)
+    _op_free(op)
 
 
-def op_free(op):
-    """
-    Frees operator and assigns new call if there is one at queue
+def _op_free(op):
+    """Frees operator <op>
+    Assigns new call if there is one at wait queue
     """
 
     handle_calls.pop(op.call_id)
     op.call_id = None
     op.state = OperatorStates.AVAILABLE
-    free_operators[op.op_id] = op
+    available_operators[op.op_id] = op
 
     if len(wait_calls) > 0:
-        receive_call(wait_calls.pop(0))
+        new_call(wait_calls.pop(0))
+
+
+def _op_respond_call(op_id):
+    """
+    Prints an error if operator is not in ringing state
+    Prints an error if operator is ringing but call doesn't exist
+    """
+    if op_id not in ringing_operators:
+        print('error: operator not in ringing state')
+        return None
+
+    op = ringing_operators.pop(op_id)
+
+    if op.call_id is None:
+        print('error: operator in ringing state but call_id is None')
+        _op_free(op)
+        print('Operator', op_id, 'moved back to', \
+              OperatorStates.AVAILABLE, 'state')
+        return None
+
+    return op
 
 
 def generate_operators(num_ops):
-    """
-    Generates <num_ops> operator objects
-    chooses length of operator ID according to <num_ops>
-    returns operators in a set
+    """ Generates <num_ops> operator objects
+    Chooses length of operator ID according to <num_ops>
+    Returns operators in a set
     """
     if num_ops > MAX_NUM_OPS:
         print('error: maximum number of operators is', num_ops)
@@ -187,9 +205,10 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         num_ops = int(sys.argv[1])
 
-    free_operators = generate_operators(num_ops)
+    available_operators = generate_operators(num_ops)
     ringing_operators = OrderedDict()
     busy_operators = OrderedDict()
+
     wait_calls = []
     handle_calls = OrderedDict()
 
