@@ -74,11 +74,11 @@ class Client(Protocol):
 
     def dataReceived(self, data):
         messages = data.decode().strip().split('\n')
-        print(messages)
         print() # insert \n
         for msg in messages:
             loaded_json = json.loads(msg)
-            print('\tServer: ' + str(loaded_json)) # TODO: parse update messages
+            print('Server:', loaded_json['type'] + ':',\
+                  loaded_json['message'])
 
     def connectionMade(self):
         print('Connected to server')

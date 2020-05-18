@@ -35,7 +35,6 @@ class ClientHandler(Protocol):
         if cmd not in COMMANDS:
             self.send_msg('error', 'invalid command ' + cmd)
             return
-        # TODO: get commands return message
         COMMANDS[cmd](_id, self) # call command
 
     def send_msg(self, msg_type, content):
@@ -43,7 +42,7 @@ class ClientHandler(Protocol):
         self.transport.write((json.dumps(msg)+'\n').encode())
 
 
-def new_call(call_id, client):
+def new_call(call_id, client, fromQueue=False):
     """ Creates a new call with ID <call_id>
     Assigns call to available operator
     Inserts assigned call into handle_calls
@@ -55,15 +54,18 @@ def new_call(call_id, client):
                         ' already exists')
         return
 
-    client.send_msg('update', call_id + ' received')
+    # only print "call received" if call doesnt come from queue
+    if not fromQueue:
+        client.send_msg('update', 'Call '+ call_id +' received')
+
     if len(available_operators) <= 0:
         wait_calls.append(call_id)
         client.send_msg('update', 'Call ' + call_id + \
                         ' waiting in queue')
         return
 
+    # Move operator from available to ringing
     op_id, op = available_operators.popitem(last=False)
-
     handle_calls[call_id] = op_id
     op.call_id = call_id
     op.state = OperatorStates.RINGING
@@ -77,7 +79,7 @@ def op_answer_call(op_id, client):
     """ Accepts a ringing call in the operator with ID <op_id>
     Moves operator to BUSY state
     """
-    op = _op_respond_call(op_id)
+    op = _op_respond_call(op_id, client)
     if op:
         op.state = OperatorStates.BUSY
         busy_operators[op_id] = op
@@ -89,11 +91,11 @@ def op_reject_call(op_id, client):
     """ Rejects a ringing call in the operator with ID <op_id>
     Frees operator and move call to wait_calls
     """
-    op = _op_respond_call(op_id)
+    op = _op_respond_call(op_id, client)
     if op:
         client.send_msg('update', 'Call ' + op.call_id + \
                         ' rejected by operator ' + op.op_id)
-        _op_free(op)
+        _op_free(op, client)
 
 
 def hangup_call(call_id, client):
@@ -112,37 +114,51 @@ def hangup_call(call_id, client):
         return
 
     op_id = handle_calls[call_id]
-    if op_id in ringing_operators:
+
+    if op_id in ringing_operators: # hangup a ringing call
+        op = ringing_operators[op_id]
         client.send_msg('update', 'Call '+call_id+' missed')
-        return
+    else:                           # hangup an ongoing call
+        op = busy_operators[op_id]
+        client.send_msg('update', 'Call '+call_id+' finished' + \
+                        ' and operator ' + op_id + ' available')
 
-    op = busy_operators[op_id]
-    client.send_msg('update', 'Call '+call_id+' finished and \
-                    operator ' + op_id + ' available')
+    _op_free(op, client)
 
 
-def _op_free(op):
+def _op_free(op, client):
     """Frees operator <op>
+    Removes operator from busy or ringing group
+    Puts operator in available_operators
     Assigns new call if there is one at wait queue
     """
 
     handle_calls.pop(op.call_id)
     op.call_id = None
     op.state = OperatorStates.AVAILABLE
+
+    # Remove operator from wherever he is
+    if op.op_id in busy_operators:
+        busy_operators.pop(op.op_id)
+    elif op.op_id in ringing_operators:
+        ringing_operators.pop(op.op_id)
+    else:
+        print('error: trying to free available operator')
+
     available_operators[op.op_id] = op
 
     if len(wait_calls) > 0:
-        new_call(wait_calls.pop(0))
+        new_call(wait_calls.pop(0), client, fromQueue=True)
 
 
-def _op_respond_call(op_id):
+def _op_respond_call(op_id, client):
     """
     Returns an error if operator is not in ringing state
     Returns an error if call doesn't exist
     """
     if op_id not in ringing_operators:
         client.send_msg('error', 'operator ' + op_id + \
-                        'not in ringing state')
+                        ' not in ringing state')
         return None
 
     op = ringing_operators.pop(op_id)
@@ -150,7 +166,7 @@ def _op_respond_call(op_id):
     if op.call_id is None:
         client.send_msg('error', 'operator ' + op_id + ' in \
                         ringing state but call_id is none')
-        _op_free(op)
+        _op_free(op, client)
         client.send_msg('update', 'operator '+ op_id+' moved \
             back to ' + OperatorStates.AVAILABLE + ' state')
         return None
