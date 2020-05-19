@@ -16,6 +16,8 @@ Answer | {'command': 'answer', 'id': `op_id`} | Answers a ringing call (if exist
 Reject | {'command': 'reject', 'id': `op_id`} | Rejects a ringing call (if exists) on operator with ID `op_id`
 --- | --- | ---
 Hangup | {'command': 'hangup', 'id': `call_id`} | Deletes a call (if exists) with the ID `call_id`
+--- | --- | ---
+Hangup | {'command': 'hangup', 'id': `call_id`} | Deletes a call (if exists) with the ID `call_id`
 
 ### Info Messages (from server to client)
 Message | JSON format | Description
