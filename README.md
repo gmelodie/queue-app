@@ -15,7 +15,7 @@ You may also run both the server and the client without the pre-compiled docker 
  for this you would need to download and install the dependencies
  on your machine or using a virtual environment
 ```
-python3 -m pip -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 ## Usage
