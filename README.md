@@ -26,7 +26,7 @@ python3 src/server.py [number of operators] [listen port]
 ```
 Or using the docker image
 ```
-docker run -p 5678:5678 queue-app [number of operators] [listen port]
+docker run -p 5678:5678 gmelodie/queue-app [number of operators] [listen port]
 ```
 
 **Obs:** The server defaults to serve on `localhost` port `5678`. If you decide to change these configurations
