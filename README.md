@@ -2,10 +2,16 @@
 Call center CLI queue simulation app
 
 ## Installation
-### Docker containers
+### Docker container
+Download the docker containter for the server
+```
+docker pull gmelodie/queue-app
+```
+
+There is no docker image available for the client at the moment
 
 ### Bare installation
-You may also run bothe the server and the client without the pre-compiled docker image,
+You may also run both the server and the client without the pre-compiled docker image,
  for this you would need to download and install the dependencies
  on your machine or using a virtual environment
 ```
