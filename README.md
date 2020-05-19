@@ -22,7 +22,7 @@ python3 -m pip install -r requirements.txt
 ### Running server
 You may run the server directly python (this requires you to install the dependencies on `requirements.txt`)
 ```
-python3 server.py [number of operators] [listen port]
+python3 src/server.py [number of operators] [listen port]
 ```
 Or using the docker image
 ```
@@ -37,7 +37,7 @@ There is no docker image for the client. To run the client download the dependen
  `requirements.txt` and execute it using python
 
 ```
-python3 client.py [remote host] [remote port]
+python3 src/client.py [remote host] [remote port]
 ```
 
 
