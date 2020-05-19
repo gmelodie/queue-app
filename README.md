@@ -49,7 +49,7 @@ Call | {'command': 'call', 'id': `call_id`} | Creates new call with the ID `call
 Answer | {'command': 'answer', 'id': `op_id`} | Answers a ringing call (if exists) on operator with ID `op_id`
 Reject | {'command': 'reject', 'id': `op_id`} | Rejects a ringing call (if exists) on operator with ID `op_id`
 Hangup | {'command': 'hangup', 'id': `call_id`} | Deletes a call (if exists) with the ID `call_id`
-Info | {'command': 'info', 'id': `{ops | calls}`} | Prints informations about operators (if `ops`) or call queues (if `calls`)
+Info | {'command': 'info', 'id': `{ops, calls}`} | Prints informations about operators (if `ops`) or call queues (if `calls`)
 
 ### Info Messages (from server to client)
 Message | JSON format | Description
